@@ -1,1 +1,1 @@
-Python Ttkinter TodoList
+Python Ttkinter TodoList. This uses SQLite as backend. 
