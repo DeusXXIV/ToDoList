@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog
-from tkinter import ttk  # Import ttk module for Combobox
+from tkinter import ttk
 import sqlite3
 
 # Database setup
@@ -91,24 +91,11 @@ def fetch_tasks(list_id, completed=None):
     conn.close()
     return tasks
 
-def print_schema():
-    conn = create_connection()
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(task_lists);")
-    print("task_lists schema:")
-    for row in cursor.fetchall():
-        print(row)
-    cursor.execute("PRAGMA table_info(tasks);")
-    print("tasks schema:")
-    for row in cursor.fetchall():
-        print(row)
-    conn.close()
-
 def add_task():
     task = entry_task.get()
     selected_list_id = combo_task_lists.get()
     if task and selected_list_id:
-        list_id = int(selected_list_id.split(":")[0])  # Extract list ID
+        list_id = int(selected_list_id.split(":")[0].strip())  # Extract list ID, strip any extra whitespace
         add_task_to_db(task, list_id)
         refresh_tasks()
         entry_task.delete(0, tk.END)
@@ -117,41 +104,64 @@ def add_task():
 
 def remove_task():
     try:
-        selected_task_index = listbox_ongoing_tasks.curselection()[0]
-        task_id = listbox_ongoing_tasks.get(selected_task_index).split(":")[0]
-        remove_task_from_db(task_id)
-        refresh_tasks()
-    except IndexError:
-        messagebox.showwarning("Warning", "You must select a task to remove.")
+        selected_task_index = listbox_ongoing_tasks.curselection()
+        if selected_task_index:
+            task_description = listbox_ongoing_tasks.get(selected_task_index[0])
+            task_id = ongoing_tasks_map[task_description]  # Get task ID from mapping
+            remove_task_from_db(task_id)
+            refresh_tasks()
+        else:
+            selected_task_index = listbox_completed_tasks.curselection()
+            if selected_task_index:
+                task_description = listbox_completed_tasks.get(selected_task_index[0])
+                task_id = completed_tasks_map[task_description]  # Get task ID from mapping
+                remove_task_from_db(task_id)
+                refresh_tasks()
+            else:
+                messagebox.showwarning("Warning", "You must select a task to remove.")
+    except KeyError:
+        messagebox.showwarning("Warning", "Selected task not found.")
 
 def mark_completed():
     try:
-        selected_task_index = listbox_ongoing_tasks.curselection()[0]
-        task_id = listbox_ongoing_tasks.get(selected_task_index).split(":")[0]
-        mark_task_completed(task_id)
-        refresh_tasks()
-    except IndexError:
-        messagebox.showwarning("Warning", "You must select a task to mark as completed.")
+        selected_task_index = listbox_ongoing_tasks.curselection()
+        if selected_task_index:
+            task_description = listbox_ongoing_tasks.get(selected_task_index[0])
+            task_id = ongoing_tasks_map[task_description]  # Get task ID from mapping
+            mark_task_completed(task_id)
+            refresh_tasks()
+        else:
+            messagebox.showwarning("Warning", "You must select a task to mark as completed.")
+    except KeyError:
+        messagebox.showwarning("Warning", "Selected task not found.")
 
 def refresh_tasks():
-    selected_list_id = combo_task_lists.get()
-    if selected_list_id:
-        list_id = int(selected_list_id.split(":")[0])  # Extract list ID
+    selected_list = combo_task_lists.get()
+    if selected_list:
+        list_id = int(selected_list.split(":")[0].strip())  # Extract list ID, strip any extra whitespace
         ongoing_tasks = fetch_tasks(list_id, completed=0)
         completed_tasks = fetch_tasks(list_id, completed=1)
 
         listbox_ongoing_tasks.delete(0, tk.END)
         listbox_completed_tasks.delete(0, tk.END)
 
+        # Maintain task description to ID mapping
+        global ongoing_tasks_map
+        global completed_tasks_map
+        ongoing_tasks_map = {}
+        completed_tasks_map = {}
+
         for task in ongoing_tasks:
-            listbox_ongoing_tasks.insert(tk.END, f"{task[0]}: {task[1]}")
+            listbox_ongoing_tasks.insert(tk.END, task[1])  # Insert only task description
+            ongoing_tasks_map[task[1]] = task[0]  # Map description to ID
 
         for task in completed_tasks:
-            listbox_completed_tasks.insert(tk.END, f"{task[0]}: {task[1]} (Completed)")
+            listbox_completed_tasks.insert(tk.END, task[1])  # Insert only task description
+            completed_tasks_map[task[1]] = task[0]  # Map description to ID
 
 def load_task_lists():
     task_lists = fetch_task_lists()
-    combo_task_lists['values'] = [f"{list_id}: {list_name}" for list_id, list_name in task_lists]
+    combo_task_lists['values'] = [f"{list_id}: {list_name}" for list_id, list_name in task_lists]  # Format as "ID: Name"
     if task_lists:
         combo_task_lists.current(0)
         refresh_tasks()
@@ -169,9 +179,6 @@ app.title("To-Do List with Database")
 create_tables()  # Ensure the database tables exist
 update_database_schema()  # Update the schema if needed
 
-# Print schema to debug issues
-print_schema()
-
 # Frame for task list management
 frame_list_management = tk.Frame(app)
 frame_list_management.pack(pady=10)
@@ -181,7 +188,7 @@ button_create_list = tk.Button(frame_list_management, text="Create Task List", c
 button_create_list.pack(side=tk.LEFT, padx=10)
 
 # Dropdown to select task list
-combo_task_lists = ttk.Combobox(frame_list_management, width=40)  # Use ttk.Combobox
+combo_task_lists = ttk.Combobox(frame_list_management, width=40)
 combo_task_lists.pack(side=tk.LEFT, padx=10)
 combo_task_lists.bind('<<ComboboxSelected>>', lambda e: refresh_tasks())
 
@@ -231,7 +238,11 @@ button_completed.pack(side=tk.LEFT, padx=10)
 # Load task lists and initial tasks
 load_task_lists()
 
-# Start the main loop
 app.mainloop()
+
+
+
+
+
 
 
