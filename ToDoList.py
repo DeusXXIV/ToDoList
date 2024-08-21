@@ -93,9 +93,9 @@ def fetch_tasks(list_id, completed=None):
 
 def add_task():
     task = entry_task.get()
-    selected_list_id = combo_task_lists.get()
-    if task and selected_list_id:
-        list_id = int(selected_list_id.split(":")[0].strip())  # Extract list ID, strip any extra whitespace
+    selected_list = combo_task_lists.get()
+    list_id = task_lists_map.get(selected_list)  # Get list ID using the name
+    if task and list_id is not None:
         add_task_to_db(task, list_id)
         refresh_tasks()
         entry_task.delete(0, tk.END)
@@ -137,8 +137,8 @@ def mark_completed():
 
 def refresh_tasks():
     selected_list = combo_task_lists.get()
-    if selected_list:
-        list_id = int(selected_list.split(":")[0].strip())  # Extract list ID, strip any extra whitespace
+    list_id = task_lists_map.get(selected_list)  # Get list ID using the name
+    if list_id is not None:
         ongoing_tasks = fetch_tasks(list_id, completed=0)
         completed_tasks = fetch_tasks(list_id, completed=1)
 
@@ -159,9 +159,17 @@ def refresh_tasks():
             listbox_completed_tasks.insert(tk.END, task[1])  # Insert only task description
             completed_tasks_map[task[1]] = task[0]  # Map description to ID
 
-def load_task_lists():
+def refresh_task_lists():
     task_lists = fetch_task_lists()
-    combo_task_lists['values'] = [f"{list_id}: {list_name}" for list_id, list_name in task_lists]  # Format as "ID: Name"
+
+    # Maintain task list name to ID mapping
+    global task_lists_map
+    task_lists_map = {}
+
+    combo_task_lists['values'] = [list_name for _, list_name in task_lists]  # Show only names
+    for list_id, list_name in task_lists:
+        task_lists_map[list_name] = list_id  # Map list name to ID
+
     if task_lists:
         combo_task_lists.current(0)
         refresh_tasks()
@@ -170,7 +178,7 @@ def create_task_list():
     list_name = simpledialog.askstring("Task List", "Enter the name of the new task list:")
     if list_name:
         add_task_list(list_name)
-        load_task_lists()
+        refresh_task_lists()
 
 # Main application setup
 app = tk.Tk()
@@ -235,14 +243,6 @@ button_remove.pack(side=tk.LEFT, padx=10)
 button_completed = tk.Button(frame_buttons, text="Mark Completed", command=mark_completed)
 button_completed.pack(side=tk.LEFT, padx=10)
 
-# Load task lists and initial tasks
-load_task_lists()
+refresh_task_lists()
 
 app.mainloop()
-
-
-
-
-
-
-
