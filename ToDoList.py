@@ -191,7 +191,8 @@ def edit_task_list():
     selected_list = combo_task_lists.get()
     list_id = task_lists_map.get(selected_list)
     if list_id is not None:
-        new_name = simpledialog.askstring("Edit Task List", "Enter the new name for the task list:")
+        # Pass the current name of the task list as the default value
+        new_name = simpledialog.askstring("Edit Task List", "Enter the new name for the task list:", initialvalue=selected_list)
         if new_name:
             update_task_list(list_id, new_name)
             refresh_task_lists()
@@ -255,13 +256,13 @@ listbox_completed_tasks.grid(row=1, column=1, padx=10, pady=5)
 frame_task_buttons = tk.Frame(app)
 frame_task_buttons.pack(pady=10)
 
-button_remove = tk.Button(frame_task_buttons, text="Remove Task", command=remove_task)
-button_remove.pack(side=tk.LEFT, padx=10)
+button_remove_task = tk.Button(frame_task_buttons, text="Remove Task", command=remove_task)
+button_remove_task.pack(side=tk.LEFT, padx=10)
 
 button_mark_completed = tk.Button(frame_task_buttons, text="Mark as Completed", command=mark_completed)
 button_mark_completed.pack(side=tk.LEFT, padx=10)
 
-# Refresh task lists initially
+# Initialize
 refresh_task_lists()
 
 app.mainloop()
