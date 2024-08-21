@@ -57,6 +57,13 @@ def fetch_task_lists():
     conn.close()
     return task_lists
 
+def update_task_list(list_id, new_name):
+    conn = create_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE task_lists SET list_name = ? WHERE id = ?', (new_name, list_id))
+    conn.commit()
+    conn.close()
+
 def add_task_to_db(task, list_id):
     conn = create_connection()
     cursor = conn.cursor()
@@ -180,6 +187,15 @@ def create_task_list():
         add_task_list(list_name)
         refresh_task_lists()
 
+def edit_task_list():
+    selected_list = combo_task_lists.get()
+    list_id = task_lists_map.get(selected_list)
+    if list_id is not None:
+        new_name = simpledialog.askstring("Edit Task List", "Enter the new name for the task list:")
+        if new_name:
+            update_task_list(list_id, new_name)
+            refresh_task_lists()
+
 # Main application setup
 app = tk.Tk()
 app.title("To-Do List with Database")
@@ -195,8 +211,12 @@ frame_list_management.pack(pady=10)
 button_create_list = tk.Button(frame_list_management, text="Create Task List", command=create_task_list)
 button_create_list.pack(side=tk.LEFT, padx=10)
 
-# Dropdown to select task list
-combo_task_lists = ttk.Combobox(frame_list_management, width=40)
+# Edit task list button
+button_edit_list = tk.Button(frame_list_management, text="Edit Task List", command=edit_task_list)
+button_edit_list.pack(side=tk.LEFT, padx=10)
+
+# Dropdown to select task list (set to readonly)
+combo_task_lists = ttk.Combobox(frame_list_management, width=40, state="readonly")
 combo_task_lists.pack(side=tk.LEFT, padx=10)
 combo_task_lists.bind('<<ComboboxSelected>>', lambda e: refresh_tasks())
 
@@ -231,18 +251,18 @@ listbox_ongoing_tasks.grid(row=1, column=0, padx=10, pady=5)
 listbox_completed_tasks = tk.Listbox(frame_lists, width=50, height=10, selectmode=tk.SINGLE)
 listbox_completed_tasks.grid(row=1, column=1, padx=10, pady=5)
 
-# Frame for the action buttons
-frame_buttons = tk.Frame(app)
-frame_buttons.pack(pady=10)
+# Buttons to remove and mark tasks
+frame_task_buttons = tk.Frame(app)
+frame_task_buttons.pack(pady=10)
 
-# Remove task button
-button_remove = tk.Button(frame_buttons, text="Remove Task", command=remove_task)
+button_remove = tk.Button(frame_task_buttons, text="Remove Task", command=remove_task)
 button_remove.pack(side=tk.LEFT, padx=10)
 
-# Mark completed button
-button_completed = tk.Button(frame_buttons, text="Mark Completed", command=mark_completed)
-button_completed.pack(side=tk.LEFT, padx=10)
+button_mark_completed = tk.Button(frame_task_buttons, text="Mark as Completed", command=mark_completed)
+button_mark_completed.pack(side=tk.LEFT, padx=10)
 
+# Refresh task lists initially
 refresh_task_lists()
 
 app.mainloop()
+
